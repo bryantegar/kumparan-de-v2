@@ -11,23 +11,23 @@
 
 ## Architecture
 
-```
+``` 
 ┌──────────────────────────────────────┐             ┌──────────────────────────────────────────┐
-│  kumparan.com (GraphQL API)          │             │   PostgreSQL DWH (≈ Redshift)             │
-│                                      │  Scraper    │   port 5434                               │
-│  articles, authors                   │ ──────────▶ │                                           │
-└──────────────────────────────────────┘             │   kumparan_raw         (landing)          │
-                                                     │   kumparan_intermediate (cleaned)         │
-┌──────────────────────────────────────┐             │   kumparan_dwh         (star schema)      │
-│  PostgreSQL Source (OLTP)            │  ETL DAGs   │   ├─ dim_date                             │
-│  port 5433                           │ ──────────▶ │   ├─ dim_author                            │
-│                                      │             │   ├─ dim_reader                            │
-│  articles                            │             │   ├─ dim_article                           │
-│  ├─ id               (PK)            │             │   ├─ fact_article_activity                 │
-│  ├─ title                            │             │   ├─ fact_article_impression               │
-│  ├─ content                          │             │   └─ etl_watermark                        │
-│  ├─ published_at                     │             │   kumparan_mart        (aggregated)        │
-│  ├─ author_id                        │             │   └─ mart_article                         │
+│  kumparan.com (GraphQL API)          │             │   PostgreSQL DWH (≈ Redshift)            │
+│                                      │  Scraper    │   port 5434                              │
+│  articles, authors                   │ ──────────▶│                                          │
+└──────────────────────────────────────┘             │   kumparan_raw         (landing)         │
+                                                     │   kumparan_intermediate (cleaned)        │
+┌──────────────────────────────────────┐             │   kumparan_dwh         (star schema)     │
+│  PostgreSQL Source (OLTP)            │  ETL DAGs   │   ├─ dim_date                            │
+│  port 5433                           │ ──────────▶│   ├─ dim_author                          │
+│                                      │             │   ├─ dim_reader                          │
+│  articles                            │             │   ├─ dim_article                         │
+│  ├─ id               (PK)            │             │   ├─ fact_article_activity               │
+│  ├─ title                            │             │   ├─ fact_article_impression             │
+│  ├─ content                          │             │   └─ etl_watermark                       │
+│  ├─ published_at                     │             │   kumparan_mart        (aggregated)      │
+│  ├─ author_id                        │             │   └─ mart_article                        │
 │  ├─ created_at                       │             └──────────────────────────────────────────┘
 │  ├─ updated_at                       │
 │  └─ deleted_at                       │
