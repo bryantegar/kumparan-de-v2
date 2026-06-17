@@ -1,0 +1,202 @@
+# ============================================================
+# KUMPARAN DE ASSESSMENT — Full Local Stack (Improved)
+#
+# Changes from v1:
+#   - Metabase now uses its own dedicated postgres DB (not sharing with Airflow)
+#   - sql/ DDL files properly mounted to init containers
+#   - Source DB has seed data mount removed (data comes from scraper)
+#   - scraper dependencies (requests) added to airflow pip install
+# ============================================================
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.1-python3.11
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+    AIRFLOW__WEBSERVER__SECRET_KEY: "kumparan-secret"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+    AIRFLOW__CORE__FERNET_KEY: "ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg="
+    # Source DB
+    SOURCE_DB_HOST: postgres-source
+    SOURCE_DB_PORT: "5432"
+    SOURCE_DB_NAME: kumparan_source
+    SOURCE_DB_USER: source_user
+    SOURCE_DB_PASSWORD: source_pass
+    # DWH
+    DWH_HOST: postgres-dwh
+    DWH_PORT: "5432"
+    DWH_NAME: kumparan_dwh
+    DWH_USER: dwh_user
+    DWH_PASSWORD: dwh_pass
+    DWH_SCHEMA: kumparan_dwh
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./include:/opt/airflow/include
+    - ./logs:/opt/airflow/logs
+  networks:
+    - kumparan-net
+  depends_on:
+    postgres-airflow:
+      condition: service_healthy
+    postgres-source:
+      condition: service_healthy
+    postgres-dwh:
+      condition: service_healthy
+
+services:
+
+  # ── Source OLTP ──────────────────────────────────────────────
+  postgres-source:
+    image: postgres:15-alpine
+    container_name: kumparan_source_db
+    environment:
+      POSTGRES_USER:     source_user
+      POSTGRES_PASSWORD: source_pass
+      POSTGRES_DB:       kumparan_source
+    volumes:
+      - ./sql/01_source_ddl.sql:/docker-entrypoint-initdb.d/01_source_ddl.sql
+      # Note: seed data now comes from kumparan_scraper DAG (real data)
+      - source_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U source_user -d kumparan_source"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kumparan-net
+
+  # ── DWH ─────────────────────────────────────────────────────
+  postgres-dwh:
+    image: postgres:15-alpine
+    container_name: kumparan_dwh_db
+    environment:
+      POSTGRES_USER:     dwh_user
+      POSTGRES_PASSWORD: dwh_pass
+      POSTGRES_DB:       kumparan_dwh
+    volumes:
+      - ./sql/03_dwh_ddl.sql:/docker-entrypoint-initdb.d/03_dwh_ddl.sql
+      - dwh_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dwh_user -d kumparan_dwh"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kumparan-net
+
+  # ── Airflow Metadata DB ──────────────────────────────────────
+  postgres-airflow:
+    image: postgres:15-alpine
+    container_name: kumparan_airflow_db
+    environment:
+      POSTGRES_USER:     airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB:       airflow
+    volumes:
+      - airflow_meta:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kumparan-net
+
+  # ── Metabase Metadata DB (separate from Airflow) ─────────────
+  # FIX: Metabase now has its own DB — previously it shared postgres-airflow
+  #      which risked schema collision between Airflow and Metabase metadata.
+  postgres-metabase:
+    image: postgres:15-alpine
+    container_name: kumparan_metabase_db
+    environment:
+      POSTGRES_USER:     metabase
+      POSTGRES_PASSWORD: metabase
+      POSTGRES_DB:       metabase
+    volumes:
+      - metabase_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kumparan-net
+
+  # ── Airflow Init ─────────────────────────────────────────────
+  airflow-init:
+    <<: *airflow-common
+    container_name: kumparan_airflow_init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - "pip install psycopg2-binary requests --quiet && airflow db migrate && airflow users create -u admin -p admin -f Admin -l Kumparan -r Admin -e admin@kumparan.com || true && echo 'Airflow init done.'"
+    restart: "no"
+
+  # ── Airflow Webserver ────────────────────────────────────────
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: kumparan_airflow_web
+    command:
+      - bash
+      - -c
+      - "pip install psycopg2-binary requests --quiet && airflow webserver"
+    ports:
+      - "8080:8080"
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Airflow Scheduler ────────────────────────────────────────
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: kumparan_airflow_scheduler
+    command:
+      - bash
+      - -c
+      - "pip install psycopg2-binary requests --quiet && airflow scheduler"
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ── Metabase (BI Dashboard) ──────────────────────────────────
+  metabase:
+    image: metabase/metabase:latest
+    container_name: kumparan_metabase
+    ports:
+      - "3000:3000"
+    environment:
+      # FIX: Metabase uses its own dedicated postgres DB
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: metabase
+      MB_DB_HOST: postgres-metabase
+    depends_on:
+      postgres-metabase:
+        condition: service_healthy
+    networks:
+      - kumparan-net
+
+volumes:
+  source_data:
+  dwh_data:
+  airflow_meta:
+  metabase_data:
+
+networks:
+  kumparan-net:
+    driver: bridge
