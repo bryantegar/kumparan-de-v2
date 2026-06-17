@@ -46,46 +46,6 @@
 <img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/53c82224-b7c2-46f9-8687-b8cbf58ebcf6" />
 
 
-```
-
-                     ┌──────────────┐
-                     │   dim_date   │
-                     │ date_key  PK │
-                     │ full_date    │
-                     │ year/quarter │
-                     │ month/week   │
-                     │ is_weekend   │
-                     └──────┬───────┘
-                            │ FK (published/created/updated)
-         ┌──────────────────┼──────────────────────┐
-         │                  │                      │
-┌────────▼───────┐  ┌───────▼──────────────────────▼────────────┐
-│  dim_author    │  │        fact_article_activity               │
-│ author_key  PK │◀─│ activity_key      PK                      │
-│ author_id      │  │ article_key       FK → dim_article         │
-└────────────────┘  │ author_key        FK → dim_author          │
-                    │ published_date_key FK → dim_date            │
-┌───────────────┐   │ created_date_key  FK → dim_date            │
-│  dim_article  │   │ updated_date_key  FK → dim_date            │
-│ article_key PK│◀──│ content_length    (measure)                │
-│ article_id    │   │ is_published      (measure)                │
-│ title         │   │ is_deleted        (measure)                │
-│ is_deleted    │   └────────────────────────────────────────────┘
-│ deleted_at    │
-└───────────────┘
-
-┌───────────────┐   ┌────────────────────────────────────────────┐
-│  dim_reader   │   │       fact_article_impression              │
-│ reader_key PK │◀──│ impression_id     PK                      │
-│ reader_id     │   │ article_key       FK → dim_article         │
-└───────────────┘   │ reader_key        FK → dim_reader          │
-                    │ author_key        FK → dim_author          │
-                    │ read_date_key     FK → dim_date            │
-                    │ read_duration_sec (measure)                │
-                    │ is_completed      (measure)                │
-                    └────────────────────────────────────────────┘
-```
-
 **Grain:**
 - `fact_article_activity` — satu baris per artikel (snapshot terbaru lifecycle artikel)
 - `fact_article_impression` — satu baris per read event (grain paling detail)
