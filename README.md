@@ -45,6 +45,8 @@
 ## Dimensional Model (Star Schema)
 
 ```
+<img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/34223fdc-3d55-4653-bcb2-112df0a3f099" />
+
                      ┌──────────────┐
                      │   dim_date   │
                      │ date_key  PK │
@@ -90,6 +92,8 @@
 ---
 
 ## DAGs
+<img width="1918" height="972" alt="image" src="https://github.com/user-attachments/assets/e8d2a6a2-f9b9-4df2-ac56-94a52a99684a" />
+
 
 | DAG | Schedule | Tujuan |
 |-----|----------|--------|
