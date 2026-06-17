@@ -11,16 +11,16 @@
 
 ## Architecture
 
-``` 
+```
 ┌──────────────────────────────────────┐             ┌──────────────────────────────────────────┐
 │  kumparan.com (GraphQL API)          │             │   PostgreSQL DWH (≈ Redshift)            │
 │                                      │  Scraper    │   port 5434                              │
-│  articles, authors                   │ ──────────▶│                                          │
+│  articles, authors                   │ ──────────▶ │                                          │
 └──────────────────────────────────────┘             │   kumparan_raw         (landing)         │
                                                      │   kumparan_intermediate (cleaned)        │
 ┌──────────────────────────────────────┐             │   kumparan_dwh         (star schema)     │
 │  PostgreSQL Source (OLTP)            │  ETL DAGs   │   ├─ dim_date                            │
-│  port 5433                           │ ──────────▶│   ├─ dim_author                          │
+│  port 5433                           │ ──────────▶ │   ├─ dim_author                          │
 │                                      │             │   ├─ dim_reader                          │
 │  articles                            │             │   ├─ dim_article                         │
 │  ├─ id               (PK)            │             │   ├─ fact_article_activity               │
@@ -43,7 +43,7 @@
 ---
 
 ## Dimensional Model (Star Schema)
-<img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/53c82224-b7c2-46f9-8687-b8cbf58ebcf6" />
+<img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/6a29e70a-c609-4620-b938-c47719252eaa" />
 
 
 **Grain:**
@@ -53,8 +53,7 @@
 ---
 
 ## DAGs
-<img width="1918" height="972" alt="image" src="https://github.com/user-attachments/assets/e8d2a6a2-f9b9-4df2-ac56-94a52a99684a" />
-
+<img width="1918" height="965" alt="Screenshot 2026-06-17 122534" src="https://github.com/user-attachments/assets/d353eaee-bd76-47ed-935e-1eb497d5e4cc" />
 
 | DAG | Schedule | Tujuan |
 |-----|----------|--------|
@@ -116,6 +115,7 @@ Setelah initial load **semua task hijau**:
 ---
 
 ## Verifikasi Data di DWH
+<img width="1073" height="602" alt="Screenshot 2026-06-18 041836" src="https://github.com/user-attachments/assets/9f194711-cc73-4238-a23c-389604a63d15" />
 
 Connect ke DWH PostgreSQL via DBeaver atau psql:
 ```
@@ -225,6 +225,6 @@ kumparan-de-v2/
 ├── sql/
 │   ├── 01_source_ddl.sql              ← Source schema + trigger hard delete
 │   └── 03_dwh_ddl.sql                 ← Star schema (Redshift-compatible), 4 schemas
-├── docker-compose.yml                 ← Full local stack (Airflow + Source DB + DWH + Metabase)
+├── docker-compose.yml                 ← Full local stack (Airflow + Source DB + DWH)
 └── README.md
 ```
