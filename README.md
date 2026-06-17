@@ -43,9 +43,10 @@
 ---
 
 ## Dimensional Model (Star Schema)
+<img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/53c82224-b7c2-46f9-8687-b8cbf58ebcf6" />
+
 
 ```
-<img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/34223fdc-3d55-4653-bcb2-112df0a3f099" />
 
                      ┌──────────────┐
                      │   dim_date   │
