@@ -26,6 +26,12 @@ flowchart LR
     OLTP -->|ETL hourly| DWH
     AF -.->|orchestrates| DWH
 ```
+> **Catatan tentang `kumparan_scraper` DAG:** DAG ini adalah *data ingestion layer* opsional
+> yang mengisi Source DB dengan data real dari kumparan.com via GraphQL API.
+> Pipeline ETL utama (`articles_etl_hourly`) beroperasi dari Source DB → DWH, sesuai requirement soal.
+> Scraper berjalan sebelum ETL hourly agar Source DB selalu memiliki data terbaru.
+
+---
 
 ## Dimensional Model (Star Schema)
 <img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/6a29e70a-c609-4620-b938-c47719252eaa" />
