@@ -12,43 +12,19 @@
 ## Architecture
 
 ```mermaid
-flowchart TB
-    subgraph SOURCES["📰 Data Sources"]
-        direction LR
-        API["🌐 kumparan.com\nGraphQL API"]
-        OLTP["🗄️ PostgreSQL Source\nOLTP · port 5433"]
+flowchart LR
+    API["🌐 kumparan.com\nGraphQL API"]
+    OLTP["🗄️ Source DB\nPostgreSQL OLTP"]
+
+    subgraph DWH["PostgreSQL DWH · port 5434"]
+        RAW["raw"] --> INT["intermediate"] --> STAR["dwh\nstar schema"] --> MART["mart"]
     end
 
-    subgraph AIRFLOW["⚙️ Apache Airflow · Orchestration"]
-        direction LR
-        DAG1["kumparan_scraper\n@hourly"]
-        DAG2["articles_initial_load\nmanual"]
-        DAG3["articles_etl_hourly\n@hourly"]
-        DAG4["articles_hard_delete_sync\n@daily"]
-    end
+    AF["⚙️ Airflow\n4 DAGs"]
 
-    subgraph DWH["🗄️ PostgreSQL DWH · port 5434"]
-        RAW["kumparan_raw\nlanding zone"]
-        INT["kumparan_intermediate\ncleaned · upsert"]
-
-        subgraph STAR["⭐ kumparan_dwh · star schema"]
-            direction LR
-            DIM1["dim_date"] & DIM2["dim_author"] & DIM3["dim_article"]
-            FACT1["fact_article_activity"] & FACT2["fact_article_impression"]
-            WM["etl_watermark"]
-        end
-
-        MART["📊 kumparan_mart\nmart_article"]
-    end
-
-    API -->|scraper DAG| OLTP
-    OLTP -->|ETL hourly| RAW
-    RAW --> INT
-    INT --> STAR
-    STAR --> MART
-
-    AIRFLOW -.->|orchestrates| SOURCES
-    AIRFLOW -.->|orchestrates| DWH
+    API -->|scraper| DWH
+    OLTP -->|ETL hourly| DWH
+    AF -.->|orchestrates| DWH
 ```
 
 > **Catatan tentang `kumparan_scraper` DAG:** DAG ini adalah *data ingestion layer* opsional
