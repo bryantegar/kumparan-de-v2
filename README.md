@@ -27,29 +27,6 @@ flowchart LR
     AF -.->|orchestrates| DWH
 ```
 
-> **Catatan tentang `kumparan_scraper` DAG:** DAG ini adalah *data ingestion layer* opsional
-> yang mengisi Source DB dengan data real dari kumparan.com via GraphQL API.
-> Pipeline ETL utama (`articles_etl_hourly`) beroperasi dari Source DB → DWH, sesuai requirement soal.
-> Scraper berjalan sebelum ETL hourly agar Source DB selalu memiliki data terbaru.
-### DAGs
-
-| DAG | Schedule | Fungsi |
-|---|---|---|
-| `kumparan_scraper` | `@hourly` | Scrape artikel dari kumparan.com → Source DB |
-| `articles_initial_load` | Manual | Backfill historis 2016 → sekarang |
-| `articles_etl_hourly` | `@hourly` | Incremental ELT: Source DB → RAW → DWH → Mart |
-| `articles_hard_delete_sync` | `@daily` | Sinkronisasi hard delete source vs DWH |
-
-### DWH Schema
-
-| Layer | Schema | Isi |
-|---|---|---|
-| Landing | `kumparan_raw` | Data mentah hasil scraping, append-only |
-| Cleaned | `kumparan_intermediate` | Data bersih, upsert |
-| Gold | `kumparan_dwh` | Star schema: `dim_date`, `dim_author`, `dim_article`, `fact_article_activity`, `fact_article_impression` |
-| Mart | `kumparan_mart` | Agregasi siap pakai: `mart_article` |
----
-
 ## Dimensional Model (Star Schema)
 <img width="777" height="821" alt="Screenshot 2026-06-17 151709" src="https://github.com/user-attachments/assets/6a29e70a-c609-4620-b938-c47719252eaa" />
 
