@@ -31,7 +31,23 @@ flowchart LR
 > yang mengisi Source DB dengan data real dari kumparan.com via GraphQL API.
 > Pipeline ETL utama (`articles_etl_hourly`) beroperasi dari Source DB → DWH, sesuai requirement soal.
 > Scraper berjalan sebelum ETL hourly agar Source DB selalu memiliki data terbaru.
+### DAGs
 
+| DAG | Schedule | Fungsi |
+|---|---|---|
+| `kumparan_scraper` | `@hourly` | Scrape artikel dari kumparan.com → Source DB |
+| `articles_initial_load` | Manual | Backfill historis 2016 → sekarang |
+| `articles_etl_hourly` | `@hourly` | Incremental ELT: Source DB → RAW → DWH → Mart |
+| `articles_hard_delete_sync` | `@daily` | Sinkronisasi hard delete source vs DWH |
+
+### DWH Schema
+
+| Layer | Schema | Isi |
+|---|---|---|
+| Landing | `kumparan_raw` | Data mentah hasil scraping, append-only |
+| Cleaned | `kumparan_intermediate` | Data bersih, upsert |
+| Gold | `kumparan_dwh` | Star schema: `dim_date`, `dim_author`, `dim_article`, `fact_article_activity`, `fact_article_impression` |
+| Mart | `kumparan_mart` | Agregasi siap pakai: `mart_article` |
 ---
 
 ## Dimensional Model (Star Schema)
