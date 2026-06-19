@@ -34,7 +34,8 @@ flowchart LR
 ---
 
 ## Dimensional Model (Star Schema)
-docs/images/star-schema.png
+<img width="777" height="821" alt="star-schema" src="https://github.com/user-attachments/assets/d1743c0d-879b-413c-86c8-eef38c58f208" />
+
 
 
 **Grain:**
@@ -44,7 +45,8 @@ docs/images/star-schema.png
 ---
 
 ## DAGs
-docs/images/dags-airflow.png
+<img width="1918" height="972" alt="dags-airflow" src="https://github.com/user-attachments/assets/3140dea5-923b-4a45-bde9-3ba08ccee579" />
+
 
 | DAG | Schedule | Tujuan |
 |-----|----------|--------|
@@ -106,7 +108,8 @@ Setelah initial load **semua task hijau**:
 ---
 
 ## Verifikasi Data di DWH
-docs/images/dim-article.png
+<img width="1073" height="602" alt="dim-article" src="https://github.com/user-attachments/assets/98cece0a-5e24-43e8-99e2-9f90c7656984" />
+
 
 Connect ke DWH PostgreSQL via DBeaver atau psql:
 ```
