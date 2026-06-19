@@ -11,28 +11,41 @@
 
 ## Architecture
 
-```
-┌──────────────────────────────────────┐             ┌──────────────────────────────────────────┐
-│  kumparan.com (GraphQL API)          │             │   PostgreSQL DWH (≈ Redshift)            │
-│                                      │  Scraper    │   port 5434                              │
-│  articles, authors                   │ ──────────▶ │                                          │
-└──────────────────────────────────────┘             │   kumparan_raw         (landing)         │
-                                                     │   kumparan_intermediate (cleaned)        │
-┌──────────────────────────────────────┐             │   kumparan_dwh         (star schema)     │
-│  PostgreSQL Source (OLTP)            │  ETL DAGs   │   ├─ dim_date                            │
-│  port 5433                           │ ──────────▶ │   ├─ dim_author                          │
-│                                      │             │   ├─ dim_reader                          │
-│  articles                            │             │   ├─ dim_article                         │
-│  ├─ id               (PK)            │             │   ├─ fact_article_activity               │
-│  ├─ title                            │             │   ├─ fact_article_impression             │
-│  ├─ content                          │             │   └─ etl_watermark                       │
-│  ├─ published_at                     │             │   kumparan_mart        (aggregated)      │
-│  ├─ author_id                        │             │   └─ mart_article                        │
-│  ├─ created_at                       │             └──────────────────────────────────────────┘
-│  ├─ updated_at                       │
-│  └─ deleted_at                       │
-└──────────────────────────────────────┘
-         Airflow UI: http://localhost:8080
+```mermaid
+flowchart LR
+    subgraph SRC["📰 Data Sources"]
+        API["kumparan.com\nGraphQL API\narticles · authors"]
+        OLTP["PostgreSQL Source\nOLTP · port 5433\narticles table"]
+    end
+
+    subgraph ORCH["⚙️ Orchestration"]
+        AF["Apache Airflow\nlocalhost:8080\n4 DAGs"]
+    end
+
+    subgraph DWH["🗄️ PostgreSQL DWH · port 5434"]
+        RAW["kumparan_raw\nlanding zone"]
+        INT["kumparan_intermediate\ncleaned · upsert"]
+
+        subgraph STAR["kumparan_dwh · star schema"]
+            DIM1["dim_date"]
+            DIM2["dim_author"]
+            DIM3["dim_reader"]
+            DIM4["dim_article"]
+            FACT1["fact_article_activity"]
+            FACT2["fact_article_impression"]
+            WM["etl_watermark"]
+        end
+
+        MART["kumparan_mart\nmart_article"]
+    end
+
+    API -->|"kumparan_scraper DAG\n@hourly"| RAW
+    OLTP -->|"articles_etl_hourly DAG\n@hourly"| RAW
+    RAW --> INT
+    INT --> STAR
+    STAR --> MART
+    AF -.->|orchestrates| SRC
+    AF -.->|orchestrates| DWH
 ```
 
 > **Catatan tentang `kumparan_scraper` DAG:** DAG ini adalah *data ingestion layer* opsional
